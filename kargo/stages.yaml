@@ -1,0 +1,71 @@
+# test -> (prod-eu, prod-us): fans out in the Kargo pipeline view.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: addons-test
+  namespace: kargo-argo-flux
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: cert-manager
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote-addon
+          vars:
+            - name: stage
+              value: test
+            - name: argocdApp
+              value: cert-manager-test
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: addons-prod-eu
+  namespace: kargo-argo-flux
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: cert-manager
+      sources:
+        stages:
+          - addons-test
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote-addon
+          vars:
+            - name: stage
+              value: prod-eu
+            - name: argocdApp
+              value: cert-manager-prod-eu
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: addons-prod-us
+  namespace: kargo-argo-flux
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: cert-manager
+      sources:
+        stages:
+          - addons-test
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote-addon
+          vars:
+            - name: stage
+              value: prod-us
+            - name: argocdApp
+              value: cert-manager-prod-us

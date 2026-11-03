@@ -1,0 +1,33 @@
+# One Application per stage. Everything runs on one cluster: Argo CD delivers
+# the HelmRelease to the stage's host namespace (vc-<stage>), and Flux
+# helm-controller installs cert-manager into that stage's vcluster.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - stage: test
+          - stage: prod-eu
+          - stage: prod-us
+  template:
+    metadata:
+      name: 'cert-manager-{{ .stage }}'
+      annotations:
+        # lets the matching Kargo Stage update and wait on this app
+        kargo.akuity.io/authorized-stage: 'kargo-argo-flux:addons-{{ .stage }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/emilyxinyi/kargo-argo-flux-demo.git
+        targetRevision: main
+        path: 'addons/cert-manager/env/{{ .stage }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'vc-{{ .stage }}'
+      # no automated sync: Kargo's argocd-update step triggers it

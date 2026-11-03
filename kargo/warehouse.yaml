@@ -1,0 +1,13 @@
+# Watches the upstream chart; each new version becomes Freight.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: cert-manager
+  namespace: kargo-argo-flux
+spec:
+  subscriptions:
+    - chart:
+        repoURL: https://charts.jetstack.io
+        name: cert-manager
+        semverConstraint: ">=1.17.0"
+        discoveryLimit: 5

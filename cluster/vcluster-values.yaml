@@ -1,0 +1,7 @@
+# Shared vcluster config. Each "cluster" is a vcluster named "vcluster" in
+# its own host namespace (vc-test, vc-prod-eu, vc-prod-us), so its exported
+# kubeconfig Secret is always vc-vcluster. setup.sh points the kubeconfig at
+# the in-cluster Service so Flux on the host can reach it:
+#   exportKubeConfig.server=https://vcluster.vc-<stage>:443  (a SAN vcluster already signs)
+exportKubeConfig:
+  server: ""

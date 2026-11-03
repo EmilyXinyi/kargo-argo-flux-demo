@@ -1,0 +1,10 @@
+# Written by Kargo on promotion. Start a few releases behind latest so
+# there is something to promote on stage.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+spec:
+  chart:
+    spec:
+      version: "1.17.2"

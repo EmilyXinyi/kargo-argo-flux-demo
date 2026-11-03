@@ -1,0 +1,43 @@
+# Same steps for every stage: bump the HelmRelease version in Git, push,
+# then have Argo CD sync and wait for the HelmRelease to report healthy.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promote-addon
+  namespace: kargo-argo-flux
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/emilyxinyi/kargo-argo-flux-demo.git
+    - name: stage
+    - name: argocdApp
+  steps:
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.gitRepo }}
+        checkout:
+          - branch: main
+            path: ./repo
+    - uses: yaml-update
+      config:
+        path: ./repo/addons/cert-manager/env/${{ vars.stage }}/version-patch.yaml
+        updates:
+          - key: spec.chart.spec.version
+            value: ${{ chartFrom("https://charts.jetstack.io", "cert-manager").Version }}
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./repo
+        message: >-
+          cert-manager ${{ chartFrom("https://charts.jetstack.io", "cert-manager").Version }}
+          -> ${{ vars.stage }}
+    - uses: git-push
+      config:
+        path: ./repo
+    - uses: argocd-update
+      config:
+        apps:
+          - name: ${{ vars.argocdApp }}
+            sources:
+              - repoURL: ${{ vars.gitRepo }}
+                desiredRevision: ${{ task.outputs.commit.commit }}

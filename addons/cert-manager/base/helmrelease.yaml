@@ -1,0 +1,40 @@
+# Upstream cert-manager chart, installed and continuously reconciled by
+# Flux helm-controller (Helm Go SDK, no helm CLI). The HelmRelease lives on
+# the host in vc-<stage>; helm-controller installs into that stage's vcluster
+# using the kubeconfig vcluster exports.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+spec:
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: vc-vcluster
+      key: config
+  releaseName: cert-manager
+  targetNamespace: cert-manager
+  storageNamespace: cert-manager # Helm release history, inside the vcluster
+  chart:
+    spec:
+      chart: cert-manager
+      version: "0.0.0" # overridden per stage by env/<stage>/version-patch.yaml
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true # roll back on a failed upgrade
+  # Demo moment: kubectl scale/edit a cert-manager Deployment and watch
+  # helm-controller put it back.
+  driftDetection:
+    mode: enabled
+  values:
+    crds:
+      enabled: true # CRDs upgraded with the release
+      keep: true    # never deleted on uninstall
