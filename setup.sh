@@ -25,8 +25,11 @@ helm upgrade --install cert-manager cert-manager --repo https://charts.jetstack.
   --set crds.enabled=true --wait
 
 step "Argo CD"
+# Same kindnet DNS problem as Flux below: the chart's NetworkPolicies make
+# lookups of argocd-repo-server time out, so don't create them.
 helm upgrade --install argocd argo-cd --repo https://argoproj.github.io/argo-helm \
-  --version "$ARGOCD_CHART_VERSION" -n argocd --create-namespace --wait
+  --version "$ARGOCD_CHART_VERSION" -n argocd --create-namespace \
+  --set global.networkPolicy.create=false --wait
 
 step "Kargo (admin password: admin)"
 helm upgrade --install kargo oci://ghcr.io/akuity/kargo-charts/kargo \
@@ -35,7 +38,7 @@ helm upgrade --install kargo oci://ghcr.io/akuity/kargo-charts/kargo \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --wait
 
-step "Flux, only the controllers this lane needs"
+step "Flux, only the controllers this demo needs"
 # Flux's default NetworkPolicies break DNS for its controllers under kind's
 # kindnet, so leave them out on this local cluster.
 flux install --components=source-controller,helm-controller --network-policy=false
@@ -61,9 +64,16 @@ fi
 
 cat <<'MSG'
 
-Done. UIs:
-  Argo CD  kubectl -n argocd port-forward svc/argocd-server 8080:443   -> https://localhost:8080
+Done. UIs (HTTPS only, self-signed certs):
+  Argo CD  https://localhost:8080
            admin / $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
-  Kargo    kubectl -n kargo port-forward svc/kargo-api 8081:443        -> https://localhost:8081
+  Kargo    https://localhost:8081
            admin / admin
+
+Start the port-forwards. kubectl port-forward exits on the first connection
+reset, so each one runs in a loop that restarts it:
+  nohup sh -c 'while true; do kubectl -n argocd port-forward svc/argocd-server 8080:443; sleep 1; done' >/dev/null 2>&1 &
+  nohup sh -c 'while true; do kubectl -n kargo port-forward svc/kargo-api 8081:443; sleep 1; done' >/dev/null 2>&1 &
+Stop them with:
+  pkill -f "while true; do kubectl"
 MSG

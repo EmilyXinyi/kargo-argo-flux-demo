@@ -25,7 +25,6 @@ spec:
           - key: spec.chart.spec.version
             value: ${{ chartFrom("https://charts.jetstack.io", "cert-manager").Version }}
     - uses: git-commit
-      as: commit
       config:
         path: ./repo
         message: >-
@@ -38,6 +37,3 @@ spec:
       config:
         apps:
           - name: ${{ vars.argocdApp }}
-            sources:
-              - repoURL: ${{ vars.gitRepo }}
-                desiredRevision: ${{ task.outputs.commit.commit }}
