@@ -69,6 +69,7 @@ The script prints the port-forward commands and logins for the Argo CD and Kargo
 1. **Kargo pipeline view (1 min).** Show the new cert-manager Freight waiting, with test fanning out to prod-eu and prod-us.
 2. **Promote to test (2 min).** Show the Git commit, then the Argo CD app syncing the HelmRelease, then the HelmRelease going Progressing to Healthy. Flip to `flux get helmreleases -A` so both views are on screen. It lists every stage in one place.
 3. **Drift (1 min).** Run `./vk.sh test -n cert-manager scale deploy cert-manager --replicas=0`, then watch helm-controller restore it with `./vk.sh test -n cert-manager get deploy -w`. Argo CD shows nothing here: it manages the HelmRelease on the host, not what runs inside the vcluster. helm-controller polls rather than watches, so the fix lands on its next reconcile, within the 1m `interval`. To show it right away, trigger the next reconcile early with `flux reconcile helmrelease cert-manager -n vc-test`. Either way, `kubectl -n vc-test get events --field-selector involvedObject.kind=HelmRelease` shows `DriftDetected` then `DriftCorrected`. This is the "continuously managed Helm state" point, shown live.
+(to observed number of replicas live: ./vk.sh test -n cert-manager get deploy cert-manager -w)
 4. **Promote to both prod stages (2 min).** This is the fleet moment: the same version lands in both regions in parallel, each one gated on health. Close with: Kargo promotes, Argo CD delivers, Flux runs Helm.
 
 ## Risk control
